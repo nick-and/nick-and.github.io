@@ -1,0 +1,935 @@
+---
+title: "National Parks"
+author: "Nick Anderson"
+date: "12/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## National Parks Analysis
+
+```{r, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(png)
+library(easystats)
+options(scipen = 99999)
+
+Sys.time()%>% as.POSIXct()
+          
+
+
+
+
+# Zion
+zion <- read_csv("Zion_monthlyvis.csv",skip = 3)
+zion <- zion %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "Zion")
+
+
+arches <- read_csv("Arches_monthlyvis.csv",skip = 3)
+arches <- arches %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "Arches")
+
+grand_canyon <- read_csv("GrandCanyon_monthlyvis.csv",skip = 3)
+grand_canyon <- grand_canyon %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "GrandCanyon")
+
+bryce <- read_csv("BryceC_monthlyvis.csv",skip = 3)
+bryce <- bryce %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "Bryce")
+
+
+capitolr <- read_csv("CapitolReef_monthlyvis.csv",skip = 3)
+capitolr <- capitolr %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "CapitolReef")
+
+
+yellowstone <- read_csv("Yellowstone_monthlyvis.csv",skip = 3)
+yellowstone <- yellowstone %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "Yellowstone")
+
+
+yosemite <- read_csv("Yosemite_monthlyvis.csv",skip = 3)
+yosemite <- yosemite %>% 
+  select(!Textbox5) %>% 
+  pivot_longer(!Year,names_to = "Month",values_to="MonthlyVisitor") %>% 
+  mutate(Park = "Yosemite")
+
+
+z_a <- full_join(zion,arches)
+
+z_a_g <- full_join(z_a,grand_canyon)
+
+zagb <- full_join(z_a_g,bryce)
+
+zagbc <- full_join(zagb,capitolr)
+
+zagbcy <- full_join(zagbc,yellowstone)
+
+zagbcyy <- full_join(zagbcy,yosemite)
+
+
+year20 <- filter(zagbcyy,Year==2020)
+
+year19 <- filter(zagbcyy,Year==2019)
+
+months <- c("JAN","FEB","MAR",
+            "APR","MAY","JUN","JUL",
+            "AUG","SEP","OCT",
+            "NOV","DEC")
+monthss <- c("JAN","FEB","MAR",
+            "APR","MAY","JUN","JUL",
+            "AUG","SEP","OCT",
+            "NOV","DEC")
+
+cities <- data.frame(Park = c("Zion","Arches","GrandCanyon","Bryce","CapitolReef","Yellowstone",
+                    "Yosemite"),
+           Distance_from_Major_City.mi = c(1.1,5,6,2.4,4.6,57,14.9),
+           NearestCity = c("Springdale","Moab","Tusayan","BryceCanyonCity","Torrey",
+                            "Jackson","El Portal"),
+           Hotels = c(59,100,20+22,43,4,99+10,133+11),
+           Size_acres = c(146597,76679,1218375.5,35835,241900,2219789,759620),
+           Hikes = c(103,16,110,32,42,240,276),
+           CampUnits = c(299,51,463,200,71,1866,1471))
+
+ac <- full_join(zagbcyy,cities)
+
+
+year20 %>% 
+  mutate(Month = factor(Month,levels = months))
+temp <- read_csv("IronTempF.csv", skip = 3)
+
+
+almost_temp <- temp %>% 
+  mutate(Monthnumber=str_sub(Date,start=5,end=6) %>% as.numeric()) %>% 
+  mutate(Year=str_sub(Date,end=4) %>% as.numeric()) %>%
+  mutate(day =01) %>% 
+  mutate(date = as.POSIXct(paste0(Year,"-",Monthnumber,"-",day))) %>% 
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+
+
+
+vis_temp <- full_join(zagbcyy,almost_temp)
+
+#Graph with Temperature
+
+temp_20 <- filter(vis_temp,Year == 2020)
+
+
+
+
+
+#Adding yearly visitors
+vis_temp <- full_join(zagbcyy,almost_temp)
+
+vis_temp_y <- vis_temp %>% 
+  group_by(Year,Park) %>% 
+  mutate(YearlyVis = sum(MonthlyVisitor))
+
+
+zbctemp <- vis_temp_y %>% 
+  group_by(Year,Park) %>% 
+  summarise(YearlyTemp=mean(Value,na.rm = TRUE))
+
+
+
+acy <- full_join(vis_temp_y,cities)
+
+CompleteVis <- zagbcyy %>% 
+  group_by(Year,Park) %>% 
+  mutate(YearlyVis = sum(MonthlyVisitor))
+
+washington <- read_csv("washingtontemp.csv",skip = 4)
+
+ZiTemp <- washington %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+
+zitempchart <- full_join(CompleteVis,ZiTemp)
+
+zitempchartF <- zitempchart %>% 
+  filter(Park=="Zion") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+washingtonprec <- read_csv("washingtonprec.csv",skip = 4)
+ziprec <- washingtonprec %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+ziprecchart <- full_join(CompleteVis,ziprec)
+
+ziprecchartF <- ziprecchart %>% 
+  filter(Park=="Zion") %>% 
+  mutate(YearlyPrecip.=mean(Value))
+
+
+grand <- read_csv("grandtemp.csv",skip = 4)
+
+grandtemp <- grand %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+arctempchart <- full_join(CompleteVis,grandtemp)
+
+arctempchartF <- arctempchart %>% 
+  filter(Park=="Arches") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+grandprec <- read_csv("grandprec.csv",skip = 4)
+arcprec <- grandprec %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+arcprecchart <- full_join(CompleteVis,arcprec)
+
+arcprecchartF <- arcprecchart %>% 
+  filter(Park=="Arches") %>% 
+  mutate(YearlyPrecip.=mean(Value))
+
+
+
+
+
+
+coconino <- read_csv("coconinotemp.csv",skip = 4)
+gctemp <- coconino %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+gctempchart <- full_join(CompleteVis,gctemp)
+gctempchartF <- gctempchart %>% 
+  filter(Park=="GrandCanyon") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+coconinoprec <- read_csv("coconinoprec.csv",skip = 4)
+gcprec <- coconinoprec %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+gcprecchart <- full_join(CompleteVis,gcprec)
+
+gcprecchartF <- gcprecchart %>% 
+  filter(Park=="GrandCanyon") %>% 
+  mutate(YearlyPrecip.=mean(Value))
+
+
+wayne <- read_csv("waynetemp.csv",skip = 4)
+crtemp <- wayne %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+crtempchart <- full_join(CompleteVis,crtemp)
+crtempchartF <- crtempchart %>% 
+  filter(Park=="CapitolReef") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+
+waynepr <- read_csv("wayneprec.csv",skip = 4)
+crprec <- waynepr %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+crprecchart <- full_join(CompleteVis,crprec)
+
+crprecchartF <- crprecchart %>% 
+  filter(Park=="CapitolReef") %>% 
+  mutate(YearlyPrecip.=mean(Value))
+
+
+
+
+
+
+
+
+teton <- read_csv("tetontemp.csv",skip = 4)
+yeltemp <- teton %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+yeltempchart <- full_join(CompleteVis,yeltemp)
+yeltempchartF <- yeltempchart %>% 
+  filter(Park=="Yellowstone") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+
+teton.pr <- read_csv("tetonprec.csv",skip = 4)
+
+yelpr <- teton.pr %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+yelprchart <- full_join(CompleteVis,yelpr)
+
+yelprchartF <- yelprchart %>% 
+  filter(Park=="Yellowstone") %>% 
+  mutate(YearlyPrecip.=sum(Value))
+
+
+
+mariposa <- read_csv("YosTemp.csv",skip = 4)
+
+YosTemp <- mariposa %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+
+
+YosTempChart <- full_join(CompleteVis,YosTemp)
+
+YosTempChartF <- YosTempChart %>% 
+  filter(Park=="Yosemite") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+
+mariposaprec <- read_csv("mariposaprec.csv",skip = 4)
+yosprec <- mariposaprec %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+yosprchart <- full_join(CompleteVis,yosprec)
+
+yosprchartF <- yosprchart %>% 
+  filter(Park=="Yellowstone") %>% 
+  mutate(YearlyPrecip.=sum(Value))
+
+
+
+
+
+
+
+g <- read_csv("abcztemp.csv",skip=4)
+gartemp <- g %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+brytempchart <- full_join(CompleteVis,gartemp)
+
+brytempchartF <- brytempchart %>% 
+  filter(Park=="Bryce") %>% 
+  mutate(YearlyAVGtemp.=mean(Value))
+
+garfieldprec <- read_csv("garfieldprec.csv",skip = 4)
+garpr <- garfieldprec %>% 
+  mutate(Monthnumber = as.numeric(str_sub(Date,start = 5,end = 6))) %>%  
+  mutate(Year=as.numeric(str_sub(Date,end=4))) %>%
+  mutate(Month = case_when(Monthnumber == 1 ~ "JAN",
+                           Monthnumber == 2 ~ "FEB",
+                           Monthnumber == 3 ~ "MAR",
+                           Monthnumber == 4 ~ "APR",
+                           Monthnumber == 5 ~ "MAY",
+                           Monthnumber == 6 ~ "JUN",
+                           Monthnumber == 7 ~ "JUL",
+                           Monthnumber == 8 ~ "AUG",
+                           Monthnumber == 9 ~ "SEP",
+                           Monthnumber == 10 ~ "OCT",
+                           Monthnumber == 11 ~ "NOV",
+                           Monthnumber == 12 ~ "DEC"))
+garprchart <- full_join(CompleteVis,garpr)
+
+garprchartF <- garprchart %>% 
+  filter(Park=="Bryce") %>% 
+  mutate(YearlyPrecip.=mean(Value))
+
+
+
+
+
+
+
+
+
+```
+
+### Why are National Parks Important and Popular?
+
+I have been going to national parks literally every year since I was born. I was raised mostly in Utah and my family and I would make sure to visit different parks at least once or twice a year. As I got older, I started to see that these parks were getting overcrowded and less attractive. Even though I still hold a nostalgic love and respect for many of these parks, my family and I now seek to enjoy nature in more isolated places. 
+
+So why did these parks become so increasingly popular? In my opinion, National parks are a great way for people to get out and and enjoy nature in a 'casual' sense. Prime example, Zion's National Park provides great hiking trails for mostly beginner to novice hikers while providing amenities such as resort-like lodging and restaurants. They even established a shuttle transportation system around the park so people wouldn't have to "hike-to-the-hike."  While it does still offer some opportunities for the more experienced and adventurous, it is now a huge hotspot for casuals.
+
+
+Although these National Parks have now gotten more and more crowded, I would still like to visit them in the future. The primary purpose of my project was to analyze the parks' statistics and then find data to determine what time of year would be ideal for me to visit them.
+
+
+```{r, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE,
+               out.width = "75%", 
+               fig.align = "default")
+```
+
+## The Great Outdoors
+```{r}
+include_graphics(c("alcove.jpg","entrance.jpg"))
+```
+
+
+
+
+## Yearly Visitors of all Parks since 1979
+
+```{r, echo=FALSE,warning=FALSE}
+vis_temp_y %>% 
+  filter(Year>1978) %>% 
+  group_by(Year) %>% 
+  ggplot(aes(x=Year,y=YearlyVis,color=Park))+
+  geom_line()+
+  geom_point()+
+  labs(y="Yearly Visitors")
+```
+
+### Results
+1. Grand Canyon
+2. Yosemite
+3. Yellowstone
+4. Zion
+5. Bryce Canyon
+6. Arches
+7. Capitol Reef
+
+Here we see that Grand Canyon National Park is in the lead by a huge margin, having over 6 million people in 2 consecutive years. It's also important to note that during approximately 2012 and 2013 all parks, except Arches and Capitol Reef, seemed to have experienced a huge exponential growth in yearly visitation. The sudden exponential decay of visitation rates in 2020 was due to the Covid-19 Pandemic.
+
+
+
+
+
+
+
+## Here are some park statistics.
+
+```{r,echo=FALSE,fig.show='hold',out.width="50%"}
+
+cities %>% 
+  ggplot(aes(x=Park,y=Distance_from_Major_City.mi,fill=Park))+
+  geom_bar(stat = "identity",show.legend = FALSE)+
+  geom_text(aes(label=Distance_from_Major_City.mi),vjust=-.5,size=4)+
+  labs(y="Distance in Miles")+
+  ggtitle("Distance From Nearest City")
+
+
+cities %>% 
+  ggplot(aes(x=Park,y=Hotels,fill=Park))+
+  geom_bar(stat = "identity",show.legend = FALSE)+
+  geom_text(aes(label=Hotels),vjust=-.5,size = 4)+
+  labs(y="Number of Hotels")+
+  ggtitle("Total Number of Hotels Within Park and Nearest City (2021)")
+
+cities %>% 
+  ggplot(aes(x=Park,y=Size_acres,fill=Park))+
+  geom_bar(stat = "identity",show.legend = FALSE)+
+  geom_text(aes(label=Size_acres),vjust=-.5,size=4)+
+  labs(y="Acres")+
+  ggtitle("Size by Acres")
+
+cities %>% 
+  ggplot(aes(x=Park,y=CampUnits,fill=Park))+
+  geom_bar(stat = "identity",show.legend = FALSE)+
+  geom_text(aes(label=CampUnits),vjust=-.5,size=4)+
+  labs(y="Number of Campsites")+
+  ggtitle("Total Number of Campsites")
+
+cities %>% 
+  ggplot(aes(x=Park,y=Hikes,fill=Park))+
+  geom_bar(stat = "identity",show.legend = FALSE)+
+  geom_text(aes(label=Hikes),vjust=-.5,size=4)+
+  labs(y="Number of Hikes")+
+  ggtitle("Total Number of Hikes")
+
+
+```
+
+
+
+
+## How do these affect the yearly visitation rates?
+
+
+```{r,include=FALSE}
+mod1 <- glm(data = acy,
+               formula = YearlyVis~Hikes+Distance_from_Major_City.mi+Size_acres)
+anova(mod1)
+report(mod1)
+```
+
+
+
+I fitted a linear model (estimated using ML) to predict YearlyVis with Hotels, Hikes, Distance_from_Major_City.mi, CampUnits and Size_acres (formula: YearlyVis ~ Hotels + Hikes + Distance_from_Major_City.mi + CampUnits + Size_acres). The model's explanatory power is substantial (R2 = 0.74). The model's intercept, corresponding to Hotels = 0, Hikes = 0, Distance_from_Major_City.mi = 0, CampUnits = 0 and Size_acres = 0, is at 5.89e+05 (95% CI [5.11e+05, 6.67e+05], t(3522) = 14.86, p < .001). Results within this model:
+
+ - The effect of Hikes is statistically significant and positive (beta = 7853.19, 95% CI [6036.71, 9669.68], t(3522) = 8.47, p < .001; Std. beta = 0.52, 95% CI [0.40, 0.64]) This means that typically, the more hikes there are, the more likely people will attend each year.
+ - The effect of Distance from Major City mi is statistically significant and negative (beta = -92286.18, 95% CI [-99022.70, -85549.66], t(3522) = -26.85, p < .001; Std. beta = -1.18, 95% CI [-1.27, -1.09]) The farther the distance from the city, the less people will attend each year.
+ - The effect of Size acres is statistically significant and positive (beta = 2.55, 95% CI [2.46, 2.63], t(3522) = 58.33, p < .001; Std. beta = 1.32, 95% CI [1.28, 1.37]) The larger the park, the more likely people will attend each year.
+
+Standardized parameters were obtained by fitting the model on a standardized version of the dataset. 95% Confidence Intervals (CIs) and p-values were computed using
+
+Conclusion: The results of the model seem consistent and realistic. Hotels and Camp units were not included in the model because I couldn't connect dates to them. Furthermore, it's interesting to point out that Grand Canyon National Park was never the highest or lowest in any of the categories, but still has the highest yearly visitation rate.
+
+
+
+
+
+## When is the best time of year to visit each park?
+
+My ideal conditions are:
+1. Around 50 degrees average temperature.
+2. Not over 3 inches of precipitation in past months.
+3. Least amount of people that fit into the first two paramters.
+
+### When is the best time to visit Zion? 
+Result: November
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+zitempchartF %>% 
+  filter(Year>2010) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="pink")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+zitempchartF %>% 
+  filter(Year>2010) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="pink")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+ziprecchartF %>% 
+  filter(Year>2010) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="pink")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+
+```
+
+### When is the best time to visit Arches?
+Result: April or October
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+arctempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="red")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+arctempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="red")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+arcprecchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="red")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+
+```
+
+### Best month to visit Grand Canyon National Park?
+Result: March
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+gctempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="orange")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+gctempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="orange")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+gcprecchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="orange")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+
+```
+
+### Best month to visit Bryce Canyon?
+Result: April or October
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+brytempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="gold")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+brytempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="gold")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+garprchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="gold")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+```
+
+
+
+### Best month to visit Capitol Reef?
+Result: April or October
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+crtempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="green")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+crtempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="green")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+crprecchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="green")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+
+```
+
+### Best month to visit Yellowstone
+Result: September
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+yeltempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="light blue")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+yeltempchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="light blue")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+yelprchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="light blue")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+
+```
+
+
+
+
+### When is the best month to visit Yosemite?
+Result: April or November
+
+```{r,echo=FALSE,warning=FALSE,fig.show='hold',out.width="50%"}
+YosTempChartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="purple")+
+  labs(y="Average Temperature (F)")+
+  ggtitle("Average Temperatures Since 2010")
+
+YosTempChartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_boxplot(fill="purple")+
+  labs(y="Visitors")+
+  ggtitle("Monthly Visitors Since 2010")
+
+yosprchartF %>% 
+  filter(Year>2005) %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=Value))+
+  geom_boxplot(fill="purple")+
+  labs(y="Precipitation (inches)")+
+  ggtitle("Average Precipitation Since 2010")
+```
+
+
+
+
+
+
+## How did Covid-19 affect these parks?
+
+```{r,fig.show='hold',out.width="50%"}
+year19 %>%
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_line(aes(group = 1))+
+  ylab("Monthly Visitors")+
+  theme(axis.text.x = element_text(angle = 90,size = 5))+
+  facet_wrap(~Park)+
+  ggtitle("The Year 2019")
+
+year20 %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_line(aes(group = 1))+
+  ylab("Monthly Visitors")+
+  theme(axis.text.x = element_text(angle = 90,size = 5))+
+  facet_wrap(~Park)+
+  ggtitle("The Year 2020")
+
+
+```
+
+```{r,echo=FALSE,figures-side,fig.show='hold',out.width="50%"}
+
+
+year19yos <- zagbcyy %>%
+  filter(Year==2019,Park=="GrandCanyon")
+
+year19yos %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_line(aes(group = 1),linetype="dashed",color="orange",size=1)+
+  geom_point()+
+  geom_text(aes(label=MonthlyVisitor),vjust="inward",hjust="inward")+
+  theme(axis.text.y = element_text(size = 10))+
+  ylab("Monthly Visitors")+
+  theme(axis.text.x = element_text(angle = 90,size = 10))+
+  ggtitle("Grand Canyon 2019")
+
+year20yos <- year20 %>% 
+  filter(Park == "GrandCanyon")
+
+
+year20yos %>% 
+  mutate(Month = factor(Month,levels = months)) %>% 
+  ggplot(aes(x=Month,y=MonthlyVisitor))+
+  geom_line(aes(group = 1),linetype="dashed",color="orange",size=1)+
+  geom_point()+
+  geom_text(aes(label=MonthlyVisitor),vjust="inward",hjust="inward")+
+  theme(axis.text.y = element_text(size = 10))+
+  ylab("Monthly Visitors")+
+  theme(axis.text.x = element_text(angle = 90,size = 10))+
+  ggtitle("Grand Canyon 2020")
+
+
+
+
+```
+
+## Resources
+AllTrails: Trail Guides &amp; Maps for hiking, camping, and running. AllTrails.com. (n.d.). Retrieved December 13, 2021, from https://www.alltrails.com/. 
+
+U.S. Department of the Interior. (n.d.). Nps.gov homepage (U.S. National Park Service). National Parks Service. Retrieved December 13, 2021, from https://www.nps.gov/index.htm. 
+
+National Centers for Environmental Information (NCEI). (n.d.). Retrieved December 13, 2021, from https://www.ncei.noaa.gov/. 
+
+Expedia travel: Vacation Homes, hotels, car rentals, Flights &amp; More. Expedia.com. (n.d.). Retrieved December 13, 2021, from https://www.expedia.com/. 
+
+Other information was searched though google.com
+
+
+
